@@ -7,6 +7,16 @@ import java.util.logging.Logger;
 
 public class RouterLog {
     private static final Logger logger = Logger.getLogger(RouterLog.class.getSimpleName());
+    private static String className;
+    private static String methodName;
+    private static int lineCount;
+
+    private void init() {
+        StackTraceElement[] arr = Thread.currentThread().getStackTrace();
+        className = arr[4].getClassName();
+        methodName = arr[4].getMethodName();
+        lineCount = arr[4].getLineNumber();
+    }
 
     private RouterLog() {
         logger.setLevel(Level.ALL);
@@ -15,16 +25,17 @@ public class RouterLog {
         logger.addHandler(consoleHandler);
     }
 
-    public static void info(String targetClass) {
+    public static void redirectTip(String targetClass) {
         StackTraceElement[] arr = Thread.currentThread().getStackTrace();
-        StringBuilder builder = new StringBuilder();
-        builder.append(arr[4].getClassName()).append(".");
-        builder.append(arr[4].getMethodName());
-        builder.append("() Line_");
-        builder.append(arr[4].getLineNumber());
-        builder.append(" -> ");
-        builder.append(targetClass);
-        i(builder.toString());  //日志输出
+        String builder = "(" +
+                arr[4].getClassName() +
+                "." +
+                arr[4].getMethodName() +
+                "() " +
+                arr[4].getLineNumber() +
+                ") -> " +
+                targetClass;
+        i(builder);  //日志输出
 
         /*
          int count = 0;

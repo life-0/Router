@@ -10,14 +10,15 @@ java {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
     //自动注册，动态生成 META-INF/...文件
-    implementation project(path: ':Annotation')
-    implementation "com.squareup:javapoet:1.11.1"//辅助生成文件的工具类
+    implementation project(path: ':11-router:Annotation')
     //操作抽象语法树简易框架
     // https://mvnrepository.com/artifact/com.github.javaparser/javaparser-core
     implementation 'com.github.javaparser:javaparser-core:3.25.4'
 
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation 'com.google.code.gson:gson:2.10.1'
+
+
     tasks.withType(JavaCompile) {
         options.encoding("UTF-8")
         options.compilerArgs.add("--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED")

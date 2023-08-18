@@ -1,24 +1,16 @@
 package com.life.app.view;
 
-
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 import com.life.annotation.RequestMapping;
 import com.life.app.R;
-import com.life.app.view.fragment.PageFragment1;
-import com.life.app.view.fragment.PageFragment2;
 import com.life.router.Router;
-
 
 
 @SuppressLint("NonConstantResourceId")
@@ -34,7 +26,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
         Button getRequestBtn = findViewById(R.id.redirect_btn);
         getRequestBtn.setOnClickListener(this);
-
 
     }
 

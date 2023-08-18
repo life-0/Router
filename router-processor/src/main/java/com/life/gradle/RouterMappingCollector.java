@@ -20,7 +20,7 @@ public class RouterMappingCollector {
     }
 
     /**
-     * 收集class文件或者class文件目录中的映射表
+     * 收集路由映射表 RequestMapping_XXXX
      */
     public void collect(String className) {
         mappingClassNames = className;

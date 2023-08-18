@@ -10,8 +10,6 @@ import java.util.HashMap;
 
 
 public class Router {
-    private WeakReference<Context> mContextReference;
-    private static HashMap<String, String> routerMapping;
 
     private static class RouterHolder {
         private final static Router router = new Router();
@@ -21,11 +19,12 @@ public class Router {
 
     }
 
-    private void init(Context context) {
+    public void init(Context context) {
+
     }
 
     private Context getContext() {
-        return mContextReference.get();
+        return null;
 
     }
 
@@ -41,7 +40,7 @@ public class Router {
      */
 
     private String getCurrentPackageName() {
-     return null;
+        return null;
     }
 
 
@@ -53,11 +52,13 @@ public class Router {
      */
 
     private String getRouterMapping(String url) {
-        return routerMapping.get(url);
+        return null;
     }
 
     public void redirect(String url, Bundle bundle) {
+    }
 
+    public void redirect(String url) {
     }
 }
 

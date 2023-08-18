@@ -1,13 +1,18 @@
 package com.life.processor;
 
-
 import static com.sun.tools.javac.code.Flags.PARAMETER;
-import static com.sun.tools.javac.code.Flags.PUBLIC;
-import static com.sun.tools.javac.code.Flags.STATIC;
-import static com.sun.tools.javac.code.Flags.VARARGS;
 
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.TryStmt;
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.life.annotation.EnableRouter;
 import com.life.gradle.RouterMappingCollector;
+import com.life.processor_utils.FileUtil;
 import com.life.processor_utils.ObjectUtils;
 import com.sun.source.tree.Tree;
 import com.sun.source.util.Trees;
@@ -27,8 +32,7 @@ import com.sun.tools.javac.util.Names;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Field;
-import java.util.Arrays;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,7 +47,6 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -61,7 +64,7 @@ public class EnableRouterProcessor extends AbstractProcessor {
      * Elements接口的对象，用于操作元素的工具类。
      */
     private JavacElements elementUtils;
-
+    private static String routerMappingClassName;  //路由总表名称
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
@@ -95,228 +98,45 @@ public class EnableRouterProcessor extends AbstractProcessor {
             for (Element element : elements) {
                 final TypeElement typeElement = (TypeElement) element;
                 final String applicationClassName = typeElement.getQualifiedName().toString();  // 获取类的全名
+                //  获取入口模板并初始化类
+                String RouterActivityLifecycleListener = FileUtil.getInstance()
+                        .readFileAsString("/template/RouterActivityLifecycleListener.java");
+                String newRouterActivityLifecycleListenerPackageName = "com.life.app";
+                String routerActivityLifecycleListenerClassName = newRouterActivityLifecycleListenerPackageName
+                        + '.' + "RouterActivityLifecycleListener";
+                CompilationUnit applicationParse = StaticJavaParser.parse(RouterActivityLifecycleListener);
+                applicationParse.removePackageDeclaration();
+                applicationParse.setPackageDeclaration(newRouterActivityLifecycleListenerPackageName);
+                try {
+                    JavaFileObject sourceFile = mFiler.createSourceFile(routerActivityLifecycleListenerClassName);
+                    Writer writer = sourceFile.openWriter();
+                    writer.write(applicationParse.toString());
+                    writer.flush();
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
-                //获取路由总表
-                String mappingClassName = RouterMappingCollector.getInstance().getMappingClassName();
-
-                if (ObjectUtils.isNotEmpty(mappingClassName)) {
-                    note("get MappingClass: " + mappingClassName);
+                //  获取路由总表
+                routerMappingClassName = RouterMappingCollector.getInstance().getMappingClassName();
+                //  创建Router类文件
+                if (ObjectUtils.isNotEmpty(routerMappingClassName)) {
+                    note("get MappingClass: " + routerMappingClassName);
+                    String routerTemplateContent = FileUtil.getInstance().readFileAsString("/template/RouterTemplate.java");
+//                    InputStream inputStream = this.getClass().getResourceAsStream("/template/RouterTemplate.java");
+                    // 解析源代码
+                    CompilationUnit javaParse = StaticJavaParser.parse(routerTemplateContent);
+                    // 使用访问者模式找到方法并进行修改
+                    javaParse.accept(new RouterVisitor(), null);
 
                     //1 生成Router类
                     String routerFullClassName = "com.life.router.Router";
-                    StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.append("package com.life.router;\n" +
-                            "\n" +
-                            "import java.lang.ref.WeakReference;\n" +
-                            "import java.lang.reflect.InvocationTargetException;\n" +
-                            "import java.lang.reflect.Method;\n" +
-                            "import java.util.AbstractMap;\n" +
-                            "import java.util.ArrayList;\n" +
-                            "import java.util.HashMap;\n" +
-                            "import java.util.Map;\n" +
-                            "import java.util.regex.Matcher;\n" +
-                            "import java.util.regex.Pattern;\n" +
-                            "\n" +
-                            "import android.app.Activity;\n" +
-                            "import android.app.Application;\n" +
-                            "import android.content.ComponentName;\n" +
-                            "import android.content.Context;\n" +
-                            "import android.content.Intent;\n" +
-                            "import android.content.pm.PackageInfo;\n" +
-                            "import android.content.pm.PackageManager;\n" +
-                            "import android.os.Bundle;\n" +
-                            "import android.view.View;\n" +
-                            "\n" +
-                            "import androidx.appcompat.app.AppCompatActivity;\n" +
-                            "import androidx.collection.SimpleArrayMap;\n" +
-                            "import androidx.fragment.app.Fragment;\n" +
-                            "import androidx.fragment.app.FragmentActivity;\n" +
-                            "\n" +
-                            "\n" +
-                            "import com.life.app.R;\n" +
-                            "import com.life.bean.ViewBean;\n" +
-                            "import com.life.bean.ViewType;\n" +
-                            "import com.life.processor_utils.ObjectUtils;\n" +
-                            "import com.life.processor_utils.RouterLog;\n" +
-                            "import com.life.processor_utils.UrlUtil;\n" +
-                            "\n" +
-                            "public class Router {\n" +
-                            "    private WeakReference<Context> mContextReference;\n" +
-                            "    private static HashMap<String, ViewBean> routerMapping;\n" +
-                            "    private final static String TAG = Router.class.getSimpleName();\n" +
-                            "    private static int layout_id;   //布局id\n" +
-                            "\n" +
-                            "\n" +
-                            "    private static class RouterHolder {\n" +
-                            "        private final static Router router = new Router();\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    public Router() {\n" +
-                            "\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    public void init(Context context) {\n" +
-                            "        mContextReference = new WeakReference<>(context);\n" +
-                            "        //获取生成的路由总表类, 并且实例化 mappingClassName\n" +
-                            "        try {\n" +
-                            "            Class<?> aClass = Class.forName(\"" + mappingClassName + "\");\n" +
-                            "            Object instance = aClass.newInstance();\n" +
-                            "            Method getMethod = aClass.getMethod(\"get\");\n" +
-                            "            routerMapping = (HashMap<String, ViewBean>) getMethod.invoke(instance);\n" +
-                            "        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |\n" +
-                            "                IllegalAccessException | InvocationTargetException e) {\n" +
-                            "            throw new RuntimeException(e);\n" +
-                            "        }\n" +
-                            "\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    private Context getContext() {\n" +
-                            "        if (mContextReference != null) {\n" +
-                            "            return mContextReference.get().getApplicationContext();\n" +
-                            "        } else {\n" +
-                            "            return null;\n" +
-                            "        }\n" +
-                            "\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    public static Router getInstance() {\n" +
-                            "        return RouterHolder.router;\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    /**\n" +
-                            "     * 获取当前应用的包名\n" +
-                            "     *\n" +
-                            "     * @return String packageName\n" +
-                            "     */\n" +
-                            "    private String getCurrentPackageName() {\n" +
-                            "        PackageManager packageManager = getContext().getPackageManager();\n" +
-                            "        try {\n" +
-                            "            PackageInfo packageInfo = packageManager.getPackageInfo(getContext().getPackageName(), 0);\n" +
-                            "            return packageInfo.packageName;\n" +
-                            "        } catch (PackageManager.NameNotFoundException e) {\n" +
-                            "            throw new RuntimeException(e);\n" +
-                            "        }\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    /**\n" +
-                            "     * 解析路径,返回对应的类名\n" +
-                            "     *\n" +
-                            "     * @param url\n" +
-                            "     * @return\n" +
-                            "     */\n" +
-                            "    private ArrayList<ViewBean> analyzeUrl(ArrayList<String> urlList, HashMap<String, ViewBean> viewBeanHashMap) {\n" +
-                            "        ArrayList<ViewBean> viewBeans = new ArrayList<>();\n" +
-                            "        String url = urlList.remove(0);\n" +
-                            "        ViewBean viewBean = viewBeanHashMap.get(url);\n" +
-                            "        if (ObjectUtils.isNotEmpty(viewBean)) {\n" +
-                            "            viewBeans.add(viewBean);\n" +
-                            "            HashMap<String, ViewBean> children = viewBean.getChildren();\n" +
-                            "            if (ObjectUtils.isNotEmpty(children)) {\n" +
-                            "                analyzeUrl(urlList, children);\n" +
-                            "            }\n" +
-                            "        }\n" +
-                            "        return viewBeans;\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    /**\n" +
-                            "     * 获取映射表路径对应的类名\n" +
-                            "     *\n" +
-                            "     * @param url 路径\n" +
-                            "     * @return Activity全类名\n" +
-                            "     */\n" +
-                            "    private ViewBean getRouterMapping(String url) {\n" +
-                            "        return routerMapping.get(url);\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    public void redirect(String url, Bundle bundle) {\n" +
-                            "        ArrayList<String> urlList = UrlUtil.getInstance().splitUrl(url);    //分割页面\n" +
-                            "//        ArrayList<ViewBean> viewBeans = analyzeUrl(urlList, routerMapping); // 获取ViewBean\n" +
-                            "        AppCompatActivity activity = null;  //主页面对象\n" +
-                            "        Fragment parentFragment = null;   //上一级子页面对象\n" +
-                            "        ViewBean tempViewBean = routerMapping.get(urlList.get(0));  //临时的ViewBean, 暂时存放url遍历出来的ViewBean\n" +
-                            "        HashMap<String, ViewBean> tempChildrenMap = tempViewBean.getChildren();  //临时的ViewBean, 暂时存放url遍历出来的ViewBean\n" +
-                            "        for (int i = 0; i < urlList.size(); i++) {\n" +
-                            "            //给下一个页面元素赋值\n" +
-                            "            if (i != 0 && ObjectUtils.isNotEmpty(tempChildrenMap)) {\n" +
-                            "                tempViewBean = tempChildrenMap.get(urlList.get(i));\n" +
-                            "            }\n" +
-                            "\n" +
-                            "            Intent intent = new Intent();\n" +
-                            "            if (urlList.size() == (i + 1)) {    //跳转到最后一个子页面就装填数据\n" +
-                            "                intent.putExtras(bundle);\n" +
-                            "            }\n" +
-                            "            if (tempViewBean.getViewType() == ViewType.ACTIVITY) {    //页面是Activity就按照activity的方式拉起\n" +
-                            "                // 获取切换目标页面的类名\n" +
-                            "                String targetViewName = tempViewBean.getClassName();\n" +
-                            "                layout_id = tempViewBean.getContainerId() != -1 ? tempViewBean.getContainerId() : layout_id;  //  赋予fragment_layout的资源id\n" +
-                            "                ComponentName componentName = new ComponentName(getCurrentPackageName(), targetViewName);\n" +
-                            "                RouterLog.info(targetViewName);\n" +
-                            "                intent.setComponent(componentName);\n" +
-                            "                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);\n" +
-                            "                getContext().startActivity(intent);// 执行跳转页面\n" +
-                            "                //获取当前跳转的主页类 需要强转类型 applicationClassName\n" +
-                            "                com.life.app.MyApplication applicationContext = (com.life.app.MyApplication) getContext();\n" +
-                            "                activity = (AppCompatActivity) applicationContext.getCurrentActivity();\n" +
-                            "\n" +
-                            "            } else if (tempViewBean.getViewType() == ViewType.FRAGMENT) {\n" +
-                            "                try {\n" +
-                            "                    // 先获取fragment实例\n" +
-                            "                    Class<?> fragmentClass = Class.forName(tempViewBean.getClassName());\n" +
-                            "                    Fragment fragment = (Fragment) fragmentClass.newInstance();\n" +
-                            "                    //判断上一级页面是不是Activity\n" +
-                            "                       if (activity != null) { //在父Activity加载fragment\n" +
-                            "                        activity.getSupportFragmentManager()\n" +
-                            "                                .beginTransaction()\n" +
-                            "                                .replace(layout_id, fragment)\n" +
-                            "                                .commit();\n" +
-                            "                        activity = null;\n" +
-                            "\n" +
-                            "                    }\n" +
-                            "                    if (parentFragment != null) {// 在父 Fragment 中加载子 Fragment\n" +
-                            "                        fragment.setArguments(bundle);  //装填参数\n" +
-                            "                        parentFragment.getChildFragmentManager()\n" +
-                            "                                .beginTransaction()\n" +
-                            "                                .replace(layout_id, fragment)\n" +
-                            "                                .addToBackStack(null) // 添加到返回栈，实现返回键返回父 Fragment\n" +
-                            "                                .commit();\n" +
-                            "                    }\n" +
-                            "                    parentFragment = fragment;  //\n" +
-                            "                } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {\n" +
-                            "                    e.printStackTrace();\n" +
-                            "                }\n" +
-                            "\n" +
-                            "            } else if (tempViewBean.getViewType() == ViewType.DEFAULT) {\n" +
-                            "                RouterLog.e(\"It was found that this class(\" + tempViewBean.getClassName() + \") is not a Fragment or Activity.\");\n" +
-                            "            }\n" +
-                            "            tempChildrenMap = tempViewBean.getChildren();   //获取当前页面的子页面\n" +
-                            "        }\n" +
-                            "\n" +
-                            "\n" +
-                            "    }\n" +
-                            "\n" +
-                            "    public void redirect(String url) {\n" +
-                            "        // 获取切换目标页面的类名\n" +
-                            "        String targetViewName = getRouterMapping(url).getClassName();\n" +
-                            "        ComponentName componentName = new ComponentName(getCurrentPackageName(), targetViewName);\n" +
-                            "        RouterLog.info(targetViewName);\n" +
-                            "        Intent intent = new Intent();\n" +
-                            "        intent.setComponent(componentName);\n" +
-                            "        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);\n" +
-                            "        try {\n" +
-                            "            getContext().startActivity(intent);\n" +
-                            "        } catch (Exception e) {\n" +
-                            "            RouterLog.e(\"The Router framework has not been initialized, \" +\n" +
-                            "                    \"and the `@EnableRouter` annotation needs to be added at the entry point. \");\n" +
-                            "            e.printStackTrace();\n" +
-                            "        }\n" +
-                            "\n" +
-                            "    }\n" +
-                            "\n" +
-                            "}\n");
+                 /*   StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append(Arrays.toString(javaParse.stream().toArray()));*/
                     try {
                         JavaFileObject sourceFile = mFiler.createSourceFile(routerFullClassName);
                         Writer writer = sourceFile.openWriter();
-                        writer.write(stringBuilder.toString());
+                        writer.write(javaParse.toString());
                         writer.flush();
                         writer.close();
                     } catch (IOException e) {
@@ -333,12 +153,50 @@ public class EnableRouterProcessor extends AbstractProcessor {
                     treeMaker.pos = tree.pos;
                     TreeTranslator visitor = new ActivityVisitor();
                     tree.accept(visitor);
+
                 }
+
 
             }
         }
         return true;
     }
+
+
+    private static class RouterVisitor extends VoidVisitorAdapter<Void> {
+        @Override
+        public void visit(MethodDeclaration methodDeclaration, Void arg) {
+            super.visit(methodDeclaration, arg);
+            // 检查方法名是否为要修改的方法名 init
+            if (methodDeclaration.getNameAsString().equals("init")) {
+                // 遍历方法体的语句
+                methodDeclaration.getBody().ifPresent(methodBody -> {
+                    // 检查方法名是否为要修改的方法名
+                    for (Statement statement : methodBody.getStatements()) {
+                        if (statement instanceof TryStmt) {
+                            BlockStmt tryBlock = ((TryStmt) statement).getTryBlock();
+                            // 遍历 try 块内的语句
+                            for (MethodCallExpr methodCallExpr : tryBlock.findAll(MethodCallExpr.class)) {
+
+                                // 检查方法调用是否是 Class.forName, 并替换参数
+                                if (methodCallExpr.getNameAsString().equals("forName")) {
+                                    // 检查是否是特定的参数
+                                    if (methodCallExpr.getArguments().size() == 1 &&
+                                            methodCallExpr.getArguments().get(0).isNameExpr() &&
+                                            methodCallExpr.getArguments().get(0).asNameExpr().getNameAsString().equals("mappingClassName")) {
+                                        // 替换参数为新值
+                                        methodCallExpr.getArgument(0).replace(StaticJavaParser.parseExpression("\"" + routerMappingClassName + "\""));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                });
+            }
+        }
+    }
+
 
     private class ActivityVisitor extends TreeTranslator {
         @Override
@@ -346,14 +204,47 @@ public class EnableRouterProcessor extends AbstractProcessor {
             super.visitMethodDef(jcMethodDecl);
             //过滤方法
 //            note("visitMethodDef: ", jcMethodDecl.getName().toString(), jcMethodDecl.getBody().toString());
+            if (jcMethodDecl.getName().toString().equals("onCreate")) {
+                // 创建新的语句
+                // 创建 RouterActivityLifecycleListener.getInstance(getApplicationContext())
+                JCTree.JCFieldAccess getInstance = treeMaker.Select(
+                        treeMaker.Ident(names.fromString("RouterActivityLifecycleListener")),
+                        names.fromString("getInstance")
+                );
+                //  this.getApplicationContext();
+                JCTree.JCMethodInvocation getInstanceMethodInvocation = treeMaker.Apply(
+                        List.nil(),
+                        getInstance,
+                        List.of(
+                                treeMaker.Apply(
+                                        List.nil(),
+                                        treeMaker.Select(
+                                                treeMaker.Ident(names.fromString("this")),
+                                                names.fromString("getApplicationContext")
+                                        ),
+                                        List.nil()
+                                )
+                        )
+                );
 
-//            if (jcMethodDecl.getName().toString().equals("onCreate")) {
-//                JCTree.JCMethodDecl methodDecl = treeMaker.MethodDef(jcMethodDecl.getModifiers(),
-//                        getNameFromString("testMethod"), jcMethodDecl.restype,
-//                        jcMethodDecl.getTypeParameters(), jcMethodDecl.getParameters(),
-//                        jcMethodDecl.getThrows(), jcMethodDecl.getBody(), jcMethodDecl.defaultValue);
-//                result = methodDecl;
-//            }
+                // 创建 registerActivityLifecycleCallbacks 方法调用
+                // registerActivityLifecycleCallbacks (this.getApplicationContext())
+                JCTree.JCExpressionStatement statement = treeMaker.Exec(treeMaker.Apply(
+                        List.nil(),
+                        treeMaker.Ident(names.fromString("registerActivityLifecycleCallbacks")),
+                        List.of(getInstanceMethodInvocation)
+                ));
+                // 获取原有方法体
+                JCTree.JCBlock body = jcMethodDecl.body;
+
+                // 在原有方法体的末尾添加新语句
+                JCTree.JCBlock newBody = treeMaker.Block(
+                        body.flags,
+                        body.stats.append(statement));
+                // 替换原有方法体
+                jcMethodDecl.body = newBody;
+            }
+
 
         }
 
@@ -367,37 +258,25 @@ public class EnableRouterProcessor extends AbstractProcessor {
             List<JCTree.JCExpression> implementsClause = jcClassDecl.getImplementsClause(); //接口列表
             List<JCTree> defs = jcClassDecl.defs;//变量,方法列表
             Symbol.ClassSymbol sym = jcClassDecl.sym;   //包名+类名
-
 //            note("modifierName:" + jcModifiers.toString(), "className: " + name.toString(),
 //                    "typeParameters:" + Arrays.toString(typeParameters.toArray()), "extending: " + extending.toString(),
 //                    "implementsClause: " + implementsClause.toString(), "defs: " + Arrays.toString(defs.toArray()),
 //                    "sym: " + sym.toString());
             //过滤方法属性
-       /*     Map<Name, JCTree.JCMethodDecl> treeMap = jcClassDecl.defs.stream()
+            Map<Name, JCTree.JCMethodDecl> treeMap = jcClassDecl.defs.stream()
                     .filter(k -> k.getKind().equals(Tree.Kind.METHOD))
                     .map(tree -> (JCTree.JCMethodDecl) tree).collect(Collectors.toMap(JCTree.JCMethodDecl::getName, Function.identity()));
             Iterator<Map.Entry<Name, JCTree.JCMethodDecl>> iterator = treeMap.entrySet().stream().iterator();
 
-            while (iterator.hasNext()) {
-                Map.Entry<Name, JCTree.JCMethodDecl> jcVariableDeclEntry = iterator.next();
-                note("name: " + jcVariableDeclEntry.getKey().toString());
-                note("method: " + jcVariableDeclEntry.getValue().toString());
-            }*/
-          /*  if (treeMap.get(getNameFromString("onCreate")) == null) {
-                jcClassDecl.defs = jcClassDecl.defs.prepend(generalRouterInitMethod());
-            } else {
+//            while (iterator.hasNext()) {
+//                Map.Entry<Name, JCTree.JCMethodDecl> jcVariableDeclEntry = iterator.next();
+//                note("name: " + jcVariableDeclEntry.getKey().toString());
+//                note("method: " + jcVariableDeclEntry.getValue().toString());
+//            }
 
-            }*/
-//            jcClassDecl.defs = jcClassDecl.defs.prepend(generateVariable());
-//            jcClassDecl.defs = jcClassDecl.defs.prepend(generalRouterInitMethod());
         }
 
     }
-
-/*    private JCTree.JCMethodDecl routerInitStatement() {
-        //public static Context mContext;
-
-    }*/
 
     private JCTree.JCMethodDecl generalRouterInitMethod() {
         note("generalRouterInitMethod...");
@@ -415,6 +294,7 @@ public class EnableRouterProcessor extends AbstractProcessor {
         )));
 //         super.onCreate();
         jcStatements.append(treeMaker.Exec(treeMaker.Apply(List.nil(), memberAccess("super.onCreate"), List.nil())));
+        //
         jcStatements.append(treeMaker.VarDef(treeMaker.Modifiers(Flags.PARAMETER),
                 getNameFromString("router"),
                 treeMaker.Ident(getNameFromString("Router")),
@@ -513,7 +393,7 @@ public class EnableRouterProcessor extends AbstractProcessor {
      * 根据字符串获取Name，（利用Names的fromString静态方法）
      *
      * @param s
-     * @return
+     * @ NAme
      */
     private Name getNameFromString(String s) {
         return names.fromString(s);
@@ -522,8 +402,8 @@ public class EnableRouterProcessor extends AbstractProcessor {
     /**
      * 创建 域/方法 的多级访问, 方法的标识只能是最后一个
      *
-     * @param components
-     * @return
+     * @param components type
+     * @return JCExpression
      */
     private JCTree.JCExpression memberAccess(String components) {
         String[] componentArray = components.split("\\.");
