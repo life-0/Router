@@ -2,8 +2,8 @@ package com.life.app;
 
 
 import android.app.Application;
-import android.content.Context;
 import android.util.Log;
+
 
 
 import com.life.annotation.EnableRouter;
@@ -13,9 +13,9 @@ public class MyApplication extends Application {
 
     @Override
     public void onCreate() {
-
         super.onCreate();
 //        Context applicationContext = getApplicationContext();
+//        registerActivityLifecycleCallbacks(com.life.listener.RouterActivityLifecycleListener.getInstance(this.getApplicationContext()));
 //        registerActivityLifecycleCallbacks(RouterActivityLifecycleListener.getInstance(getApplicationContext()));
         Log.d("MyApplication", "test");
     }

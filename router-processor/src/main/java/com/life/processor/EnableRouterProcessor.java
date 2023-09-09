@@ -47,6 +47,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
@@ -65,6 +66,9 @@ public class EnableRouterProcessor extends AbstractProcessor {
      */
     private JavacElements elementUtils;
     private static String routerMappingClassName;  //路由总表名称
+
+    public EnableRouterProcessor() {
+    }
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
@@ -97,11 +101,13 @@ public class EnableRouterProcessor extends AbstractProcessor {
             }
             for (Element element : elements) {
                 final TypeElement typeElement = (TypeElement) element;
+                PackageElement packageElement = elementUtils.getPackageOf(typeElement); //获取自定义Application的包名
                 final String applicationClassName = typeElement.getQualifiedName().toString();  // 获取类的全名
                 //  获取入口模板并初始化类
                 String RouterActivityLifecycleListener = FileUtil.getInstance()
                         .readFileAsString("/template/RouterActivityLifecycleListener.java");
-                String newRouterActivityLifecycleListenerPackageName = "com.life.app";
+                //  在自定义的Application类目录下创建RouterActivityLifecycleListener类
+                String newRouterActivityLifecycleListenerPackageName = packageElement.getQualifiedName().toString();
                 String routerActivityLifecycleListenerClassName = newRouterActivityLifecycleListenerPackageName
                         + '.' + "RouterActivityLifecycleListener";
                 CompilationUnit applicationParse = StaticJavaParser.parse(RouterActivityLifecycleListener);
@@ -131,8 +137,6 @@ public class EnableRouterProcessor extends AbstractProcessor {
 
                     //1 生成Router类
                     String routerFullClassName = "com.life.router.Router";
-                 /*   StringBuilder stringBuilder = new StringBuilder();
-                    stringBuilder.append(Arrays.toString(javaParse.stream().toArray()));*/
                     try {
                         JavaFileObject sourceFile = mFiler.createSourceFile(routerFullClassName);
                         Writer writer = sourceFile.openWriter();
@@ -206,7 +210,7 @@ public class EnableRouterProcessor extends AbstractProcessor {
 //            note("visitMethodDef: ", jcMethodDecl.getName().toString(), jcMethodDecl.getBody().toString());
             if (jcMethodDecl.getName().toString().equals("onCreate")) {
                 // 创建新的语句
-                // 创建 RouterActivityLifecycleListener.getInstance(getApplicationContext())
+                // 创建 com.life.listener.RouterActivityLifecycleListener.getInstance(getApplicationContext())
                 JCTree.JCFieldAccess getInstance = treeMaker.Select(
                         treeMaker.Ident(names.fromString("RouterActivityLifecycleListener")),
                         names.fromString("getInstance")
@@ -227,6 +231,7 @@ public class EnableRouterProcessor extends AbstractProcessor {
                         )
                 );
 
+
                 // 创建 registerActivityLifecycleCallbacks 方法调用
                 // registerActivityLifecycleCallbacks (this.getApplicationContext())
                 JCTree.JCExpressionStatement statement = treeMaker.Exec(treeMaker.Apply(
@@ -234,15 +239,15 @@ public class EnableRouterProcessor extends AbstractProcessor {
                         treeMaker.Ident(names.fromString("registerActivityLifecycleCallbacks")),
                         List.of(getInstanceMethodInvocation)
                 ));
+                System.out.println(statement.toString());
                 // 获取原有方法体
                 JCTree.JCBlock body = jcMethodDecl.body;
 
                 // 在原有方法体的末尾添加新语句
-                JCTree.JCBlock newBody = treeMaker.Block(
+                // 替换原有方法体
+                jcMethodDecl.body = treeMaker.Block(
                         body.flags,
                         body.stats.append(statement));
-                // 替换原有方法体
-                jcMethodDecl.body = newBody;
             }
 
 
@@ -263,10 +268,10 @@ public class EnableRouterProcessor extends AbstractProcessor {
 //                    "implementsClause: " + implementsClause.toString(), "defs: " + Arrays.toString(defs.toArray()),
 //                    "sym: " + sym.toString());
             //过滤方法属性
-            Map<Name, JCTree.JCMethodDecl> treeMap = jcClassDecl.defs.stream()
-                    .filter(k -> k.getKind().equals(Tree.Kind.METHOD))
-                    .map(tree -> (JCTree.JCMethodDecl) tree).collect(Collectors.toMap(JCTree.JCMethodDecl::getName, Function.identity()));
-            Iterator<Map.Entry<Name, JCTree.JCMethodDecl>> iterator = treeMap.entrySet().stream().iterator();
+//            Map<Name, JCTree.JCMethodDecl> treeMap = jcClassDecl.defs.stream()
+//                    .filter(k -> k.getKind().equals(Tree.Kind.METHOD))
+//                    .map(tree -> (JCTree.JCMethodDecl) tree).collect(Collectors.toMap(JCTree.JCMethodDecl::getName, Function.identity()));
+//            Iterator<Map.Entry<Name, JCTree.JCMethodDecl>> iterator = treeMap.entrySet().stream().iterator();
 
 //            while (iterator.hasNext()) {
 //                Map.Entry<Name, JCTree.JCMethodDecl> jcVariableDeclEntry = iterator.next();

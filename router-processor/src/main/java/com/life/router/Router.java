@@ -1,12 +1,13 @@
-
-
 package com.life.router;
 
-import android.content.Context;
 import android.os.Bundle;
+/*
+ *@Author: life-0
+ *@ClassName: Router
+ *@Date: 2023/9/9 18:12
+ *TODO @Description:
 
-import java.lang.ref.WeakReference;
-import java.util.HashMap;
+ */
 
 
 public class Router {
@@ -19,12 +20,7 @@ public class Router {
 
     }
 
-    public void init(Context context) {
-
-    }
-
-    private Context getContext() {
-        return null;
+    public void init() {
 
     }
 
@@ -61,4 +57,5 @@ public class Router {
     public void redirect(String url) {
     }
 }
+
 

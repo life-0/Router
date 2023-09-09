@@ -17,7 +17,7 @@ import com.life.app.view.fragment.PageFragment1;
 import com.life.app.view.fragment.PageFragment2;
 import com.life.router.Router;
 
-@RequestMapping(url = "/index_2", description = "第二主页",container = R.id.container)
+@RequestMapping(url = "/index_2", description = "第二主页", container = R.id.container)
 public class Test2Activity extends AppCompatActivity implements View.OnClickListener {
     private final String TAG = "Test2Activity";
     //声明四个Tab的布局文件
@@ -35,6 +35,8 @@ public class Test2Activity extends AppCompatActivity implements View.OnClickList
         getRequestBtn.setOnClickListener(this);  // 初始化Fragment
         Button getRequestBtn3 = findViewById(R.id.redirect_btn3);
         getRequestBtn3.setOnClickListener(this);  // 初始化Fragment
+        Button getRequestBtn4 = findViewById(R.id.redirect_btn4);
+        getRequestBtn4.setOnClickListener(this);  // 初始化Fragment
         fragment1 = new PageFragment1();
         fragment2 = new PageFragment2();
 
@@ -58,8 +60,10 @@ public class Test2Activity extends AppCompatActivity implements View.OnClickList
         } else if (id == R.id.id_tab2) {
             Log.d(TAG, "onClick..2");
             replaceFragment(fragment2);
-        }else if (id==R.id.redirect_btn3){
-            Router.getInstance().redirect("/index_2/test_fragment", new Bundle());
+        } else if (id == R.id.redirect_btn3) {
+            Router.getInstance().redirect("/index_2/demo_fragment_1", new Bundle());
+        } else if (id == R.id.redirect_btn4) {
+            Router.getInstance().redirect("/index_2/demo_fragment_1/demo_fragment_1_1", new Bundle());
         }
     }
 

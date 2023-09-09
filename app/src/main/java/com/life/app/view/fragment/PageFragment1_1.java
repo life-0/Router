@@ -14,8 +14,8 @@ import com.life.annotation.RequestMapping;
 import com.life.app.R;
 import com.life.manager.RedirectThreadManager;
 
-@RequestMapping(url = "/index_2/demo_fragment_1", description = "第二子页", container = R.id.fragment_1_container)
-public class PageFragment1 extends Fragment {
+@RequestMapping(url = "/index_2/demo_fragment_1/demo_fragment_1_1", description = "第二子页的第一子页")
+public class PageFragment1_1 extends Fragment {
     private View view;
 
     @Nullable
@@ -23,25 +23,24 @@ public class PageFragment1 extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         if (view == null) {
             //防止白页
-            view = inflater.inflate(R.layout.fragment_1, container, false);
+            view = inflater.inflate(R.layout.fragment_1_1, container, false);
         }
-        Log.d("Fragment_1", "onCreateView...");
+        Log.d("PageFragment1_1", "onCreateView...");
         return view;
     }
-
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         String name = this.getClass().getName();
-        Log.d("Fragment_1", "onViewCreated....name:" + name);
+        Log.d("Fragment_1_1", name);
         RedirectThreadManager.getInstance().trigger(this.getClass().getName());
 
     }
 
     @Override
     public void onDestroyView() {
-        Log.d("Fragment_1", "onDestroyView...");
+        Log.d("PageFragment1_1", "onDestroyView...");
         super.onDestroyView();
     }
 }
