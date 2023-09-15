@@ -10,9 +10,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.life.annotation.RequestMapping;
+import com.life.router.annotation.RequestMapping;
 import com.life.app.R;
-import com.life.manager.RedirectThreadManager;
+import com.life.router.manager.RedirectThreadManager;
 
 @RequestMapping(url = "/index_2/demo_fragment_1/demo_fragment_1_1", description = "第二子页的第一子页")
 public class PageFragment1_1 extends Fragment {

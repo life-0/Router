@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".view.Test2Activity">
 
     <Button
         android:id="@+id/redirect_btn2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="跳转Activity"
+        android:text="router_跳转Activity"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -18,7 +20,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="跳转_fragment1"
+        android:text="router_跳转_fragment_1"
+        android:textSize="15sp"
         app:layout_constraintLeft_toRightOf="@id/redirect_btn2"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -27,9 +30,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="跳转_fragment1_1"
-        app:layout_constraintLeft_toRightOf="@id/redirect_btn3"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="router_跳转_fragment1_1"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/redirect_btn2" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -46,7 +49,7 @@
         android:layout_height="0dp"
         android:background="@color/white"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHeight_percent="0.8"
+        app:layout_constraintHeight_percent="0.6"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

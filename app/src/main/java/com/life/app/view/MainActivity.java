@@ -7,7 +7,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.life.annotation.RequestMapping;
+import com.life.router.annotation.RequestMapping;
 import com.life.app.R;
 import com.life.router.Router;
 

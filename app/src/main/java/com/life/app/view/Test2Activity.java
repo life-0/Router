@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.life.annotation.RequestMapping;
+import com.life.router.annotation.RequestMapping;
 import com.life.app.R;
 import com.life.app.view.fragment.PageFragment1;
 import com.life.app.view.fragment.PageFragment2;
@@ -56,13 +56,17 @@ public class Test2Activity extends AppCompatActivity implements View.OnClickList
             Router.getInstance().redirect("/index", new Bundle());
         } else if (id == R.id.id_tab1) {
             Log.d(TAG, "onClick..1");
+            //普通方式
             replaceFragment(fragment1);
         } else if (id == R.id.id_tab2) {
             Log.d(TAG, "onClick..2");
+            //普通方式
             replaceFragment(fragment2);
         } else if (id == R.id.redirect_btn3) {
+            //router框架方式
             Router.getInstance().redirect("/index_2/demo_fragment_1", new Bundle());
         } else if (id == R.id.redirect_btn4) {
+            //router框架方式
             Router.getInstance().redirect("/index_2/demo_fragment_1/demo_fragment_1_1", new Bundle());
         }
     }

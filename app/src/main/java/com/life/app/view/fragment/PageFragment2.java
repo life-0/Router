@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.life.annotation.RequestMapping;
+import com.life.router.annotation.RequestMapping;
 import com.life.app.R;
 
 @RequestMapping(url = "/index_2/demo_fragment_2", description = "默认子页")
@@ -30,6 +30,7 @@ public class PageFragment2 extends Fragment {
     public void onResume() {
         super.onResume();
     }
+
     @Override
     public void onDestroyView() {
         Log.d("Fragment_2", "onDestroyView...");
