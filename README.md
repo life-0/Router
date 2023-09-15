@@ -3,8 +3,10 @@
 **A simple Android routing framework, which references Alibaba's ARouter framework.**
 
 **Specific usage:**
+
 Step 1:
-**Import life-router.jar**
+
+Import life-router.jar
 ```yaml
 implementation files('libs/life-router-0.0.1.jar')
 annotationProcessor files('libs/life-router-0.0.1.jar')
