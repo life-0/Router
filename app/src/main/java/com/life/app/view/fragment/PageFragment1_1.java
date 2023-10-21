@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,6 +35,16 @@ public class PageFragment1_1 extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         String name = this.getClass().getName();
         Log.d("Fragment_1_1", name);
+
+        //获取Bundle 然后获取数据
+        Bundle bundle = this.getArguments();//得到从Activity传来的数据
+
+        if (bundle != null) {
+            String title = bundle.getString("test1_1");
+            Log.e("....", title);
+        }
+
+
         RedirectThreadManager.getInstance().trigger(this.getClass().getName());
 
     }

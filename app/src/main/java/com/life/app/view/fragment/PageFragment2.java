@@ -30,7 +30,6 @@ public class PageFragment2 extends Fragment {
     public void onResume() {
         super.onResume();
     }
-
     @Override
     public void onDestroyView() {
         Log.d("Fragment_2", "onDestroyView...");
